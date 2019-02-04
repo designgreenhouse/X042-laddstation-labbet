@@ -2,6 +2,7 @@
 Laddstation 01 - Support id x042
 Testkod som körs i labbet på Particle Photon
 
+## Funktioner
 Funktion 1 Particle Tinker, app för mobilapp
 Funktion 2: Seriekommunikation med Nextion display
 Funktion 3: Logga batterispänning i Particle cloud
