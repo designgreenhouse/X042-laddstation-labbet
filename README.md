@@ -9,4 +9,6 @@ Testkod som körs i labbet på Particle Photon
     Funktion 4: Logga cykelID (används ej)
     Funktion 5: Smart charger, känner av spänning och kopplar in extern powersupply vid låg spänning (hysteresis)
 
-
+### ampsensor-asc712-v3
+program from Video turoial med Antony Cartwright
+https://youtu.be/LGM8v1b41So
