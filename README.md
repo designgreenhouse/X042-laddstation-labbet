@@ -12,3 +12,5 @@ Testkod som körs i labbet på Particle Photon
 ### ampsensor-asc712-v3
 program from Video turoial med Antony Cartwright
 https://youtu.be/LGM8v1b41So
+Testar att integrera VScode med Github
+
