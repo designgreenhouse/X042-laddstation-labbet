@@ -11,6 +11,8 @@ float temp;
 float batteryVoltage;
 int cykelId;
 //#include "Particle.h"
+// This #include statement was automatically added by the Particle IDE.
+#include <MQTT.h>
 /* This function is called once at start up ----------------------------------*/
 void setup()
 {
