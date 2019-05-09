@@ -22,6 +22,7 @@ const float Vpp = 0.00488758553; // 5v/1023 = Vpp
 float voltage; //Voltage reading at sensor
 float chargeAmp; //Ampere reading
 
+
 int cykelId;
 
 void callback(char *topic, byte *payload, unsigned int length);
@@ -54,8 +55,11 @@ void callback(char *topic, byte *payload, unsigned int length)
 
 //#include "Particle.h"
 /* This function is called once at start up ----------------------------------*/
+
+
 void setup()
 {
+	
 	//Setup the Tinker application here
 
 	//Register all the Tinker functions
@@ -85,7 +89,8 @@ void setup()
 }
 
 
-/* This function loops forever --------------------------------------------*/
+//* This function loops forever --------------------------------------------
+
 void loop()
 /*******************************************************************************
  * Function Name    :   
@@ -347,4 +352,3 @@ int tinkerAnalogWrite(String command)
 	}
 	else return -2;
 }
-
