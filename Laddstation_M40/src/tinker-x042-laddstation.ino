@@ -1,5 +1,11 @@
+// This #include statement was automatically added by the Particle IDE.
+#include <MQTT.h>
+#include "PollingTimer.h"
+
+
 PRODUCT_ID(1180);
-PRODUCT_VERSION(1); 
+PRODUCT_VERSION(2);
+
 /* Function prototypes -------------------------------------------------------*/
 int tinkerDigitalRead(String pin);
 int tinkerDigitalWrite(String command);
@@ -8,11 +14,35 @@ int tinkerAnalogWrite(String command);
 int analogvalue;
 bool laddare1, laddare2, laddare3;
 float temp;
+//float temp5;
 float batteryVoltage;
+int offSet; // Offset the value from the middle
+int sensorValue; // (A1) anolog Amp sensor
+const float Vpp = 0.00488758553; // 5v/1023 = Vpp
+float voltage; //Voltage reading at sensor
+float chargeAmp; //Ampere reading
+
 int cykelId;
+
+void callback(char *topic, byte *payload, unsigned int length);
+MQTT client("skinny.skycharts.net", 1883, callback);
+
+PollingTimer batteryTimer(360000);
+int forceReading = 2;
+
+// MQTT recieve message (not used right now but include if needed)
+void callback(char *topic, byte *payload, unsigned int length)
+{
+  char p[length + 1];
+  memcpy(p, payload, length);
+  p[length] = NULL;
+
+//  Serial.print("MQTT rx:");
+//  Serial.println(p);
+//  setMessage(p);
+}
+
 //#include "Particle.h"
-// This #include statement was automatically added by the Particle IDE.
-#include <MQTT.h>
 /* This function is called once at start up ----------------------------------*/
 void setup()
 {
@@ -33,7 +63,14 @@ void setup()
     pinMode(D2, INPUT_PULLUP);
     pinMode(D3, OUTPUT);
     pinMode(A0, INPUT);
+    
+    // connect to the server(unique id by Time.now())
+    client.connect("sparkclient_" + String(Time.now()));
+    if (client.isConnected()) {
+        client.publish("my-event", "MQTT connected");
+    }
 
+    batteryTimer.start();
 }
 
 
@@ -52,13 +89,20 @@ void loop()
  ******************************************************************************/
 
  {
+     
+    if (client.isConnected()) {
+        client.loop();
+    }
+
+#if 0
     Serial1.print("t0.txt=\"25.4°C\"");
     Serial1.write(0xff);
     Serial1.write(0xff);
     Serial1.write(0xff);
     
   delay(1000);
-  
+#endif 
+
     Serial1.print("t0.txt=");
     Serial1.write(0x22); 
     // Visar batterispänning med en deciamal ex 13,9
@@ -73,10 +117,28 @@ void loop()
     
     
   delay(1000);
+
+   int takeReading = forceReading || batteryTimer.interval();
+   
+   if (!takeReading) {
+       return;
+   }
+
+  // clear flag
+  if (forceReading) {
+    forceReading--;
+  }
   
   // Publicera till particle cloud
   String temp2 = String(batteryVoltage,1); // store voltage in "batteryVoltage" string
   Particle.publish("batteryVoltage", temp2, PRIVATE); // publish to cloud
+  String temp4 = String(chargeAmp,1); // store ampere in "chargeAmp" string
+  Particle.publish("chargeAmp", temp4, PRIVATE); // publish to cloud
+  
+  if (client.isConnected()) {
+      client.publish("batteryVoltage", temp2);
+      client.publish("chargeAmp" , temp4);
+  }
  // Particle.publish("batteryVoltage", "13,9", PRIVATE); // publish to cloud
 
     String temp3 = String(cykelId); // store "CykelId" in string
@@ -87,43 +149,78 @@ void loop()
     }
     else {
        Particle.publish( "laddare1/cykelId", temp3, PRIVATE);
+      if (client.isConnected()) {
+          client.publish("laddare1/cykelId", temp3);
+      }
         
     }
    if (laddare2) {
     }
     else {
        Particle.publish( "laddare2/cykelId", temp3, PRIVATE);
+      if (client.isConnected()) {
+          client.publish("laddare2/cykelId", temp3);
+      }
+       
         
     }
    if (laddare3) {
     }
     else {
        Particle.publish( "laddare3/cykelId", temp3, PRIVATE);
+      if (client.isConnected()) {
+          client.publish("laddare3/cykelId", temp3);
+      }
         
     }
     
     cykelId = cykelId + 1;
 //delay (3600);
-delay (360000); // 5 minute delay
- 
+//delay (360000); // 5 minute delay
 
- 
+//version 1 ChargeAmp
+//float average = 0;
+  //for(int i = 0; i < 1000; i++) {
+     
+    //average = average + (.044 * analogRead(A0) -3.78) / 1000;//this is 
+    //chargeAmp = average;
+ // }
+
+//Version 3
+    sensorValue = analogRead(A1);
+    offSet = sensorValue - 550;
+    voltage = offSet * Vpp;
+    chargeAmp = voltage / 0.066;
+ //Version 2 chargeAmp
+ // check to see what the value of the A1 input is and store it in the int(heltal) variable sensorValue
+  // chargeAmp är ett flyttal som visar decimaler. Formel : chargeAmp = 60 *(A1 - 512) /1023 
+    //sensorValue = analogRead(A1);
+    //temp5 = 514 - sensorValue;
+    //chargeAmp = 75.76 * temp5 / 1023;
+    
   // check to see what the value of the A0 input is and store it in the int(heltal) variable analogvalue
   // batteryVoltage är ett flyttal som visar decimaler. Formel : batteryVoltage = A0 * 2 / 112
     analogvalue = analogRead(A0);
     temp = analogvalue*2;
-    batteryVoltage = temp/112;
+    batteryVoltage = temp / 112;
 // 3035=54,2v  3012=53,8V : 3007= 53,7V : 3001 = 53,6V :2996= 53,5 :  2938 = 52V : 2800 = 50v : 2700 = 48,21
 
    if (analogvalue<2700) {
    // if (batteryVoltage>53) {2968
         digitalWrite(D3,HIGH);
         Particle.publish("my-event","High");
+        if (client.isConnected()) {
+          client.publish("my-event", "High");
+        }
+
     }
  else if (analogvalue>2938) {
 //    else if (batteryVoltage<53.8) {3012
         digitalWrite(D3,LOW);
         Particle.publish("my-event","Low");
+        if (client.isConnected()) {
+          client.publish("my-event", "Low");
+        }
    }
    else {
 
