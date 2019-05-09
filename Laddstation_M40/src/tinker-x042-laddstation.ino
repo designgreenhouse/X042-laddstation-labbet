@@ -16,12 +16,14 @@ bool laddare1, laddare2, laddare3;
 float temp;
 //float temp5;
 float batteryVoltage;
-int offSet; // Offset the value from the middle
+int offSet; // Amp sensor Offset the value from the middle of register
 int sensorValue; // (A1) anolog Amp sensor
-const float Vpp = 0.00488758553; // 5v/1023 = Vpp
+const float Vpp = 0.001221; // 5v/1023 = Vpp = 0.00488758553
 float voltage; //Voltage reading at sensor
 float chargeAmp; //Ampere reading
-
+float solarPower; // Power (W) from solarcell
+int aValue = 0; //Node-red test av integration reading (A0)
+int bValue = 0; //Node-red test av integration reading (A1)
 
 int cykelId;
 
@@ -55,10 +57,11 @@ void callback(char *topic, byte *payload, unsigned int length)
 
 //#include "Particle.h"
 /* This function is called once at start up ----------------------------------*/
-
-
-void setup()
-{
+void setup(){
+    pinMode(D7, OUTPUT);
+    Particle.function("doLED", doLED);
+    Particle.variable("aValue", aValue);
+    Particle.variable("bValue", bValue);
 	
 	//Setup the Tinker application here
 
@@ -89,9 +92,16 @@ void setup()
 }
 
 
-//* This function loops forever --------------------------------------------
+/* This function loops forever --------------------------------------------*/
+void loop()  {
+    // assume you have an analog sensor attached to A0:
+    
+    aValue = analogRead(A0);
+    bValue = analogRead(A1);
 
-void loop()
+    // calculating power from sensor readings A0 and A1
+    solarPower = batteryVoltage * chargeAmp; 
+     
 /*******************************************************************************
  * Function Name    :   
  * Description      :   Serie communikation med Nextion display, platshållare till värde skapas i Nextion editor
@@ -104,7 +114,7 @@ void loop()
  * attribut         :   txt
  ******************************************************************************/
 
- {
+
     if (client.isConnected()) {
         client.loop();
     }
@@ -147,9 +157,12 @@ void loop()
   Particle.publish("batteryVoltage", temp2, PRIVATE); // publish to cloud
   String temp4 = String(chargeAmp,1); // store ampere in "chargeAmp" string
   Particle.publish("chargeAmp", temp4, PRIVATE); // publish to cloud
+  String temp5 = String(solarPower,1); // store ampere in "chargeAmp" string
+  Particle.publish("solarPower", temp5, PRIVATE); // publish to cloud
   
   mqttPublish("batteryVoltage", temp2);
   mqttPublish("chargeAmp" , temp4);
+  mqttPublish("solarPower" , temp5);
  // Particle.publish("batteryVoltage", "13,9", PRIVATE); // publish to cloud
 
     String temp3 = String(cykelId); // store "CykelId" in string
@@ -191,9 +204,9 @@ void measureVA() {
     //chargeAmp = average;
  // }
 
-//Version 3
+//Version 3 (A1 - 550) * (5v/1023 = 0.00488758553 =Vpp) / 0.066 känslighet sensor
     sensorValue = analogRead(A1);
-    offSet = sensorValue - 550;
+    offSet = sensorValue - 3070;
     voltage = offSet * Vpp;
     chargeAmp = voltage / 0.066;
  //Version 2 chargeAmp
@@ -352,3 +365,8 @@ int tinkerAnalogWrite(String command)
 	}
 	else return -2;
 }
+    // Integration from Node-red
+   int doLED(String cmd) {
+    bool ledState = atoi(cmd);
+    digitalWrite(D7, ledState);
+    }
