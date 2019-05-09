@@ -28,7 +28,7 @@ void callback(char *topic, byte *payload, unsigned int length);
 MQTT client("skinny.skycharts.net", 1883, callback);
 
 PollingTimer batteryTimer(360000);
-int forceReading = 2;
+volatile int forceReading = 1;
 
 // MQTT recieve message (not used right now but include if needed)
 void callback(char *topic, byte *payload, unsigned int length)
@@ -40,6 +40,7 @@ void callback(char *topic, byte *payload, unsigned int length)
 //  Serial.print("MQTT rx:");
 //  Serial.println(p);
 //  setMessage(p);
+    forceReading = 1;
 }
 
 //#include "Particle.h"
@@ -68,6 +69,7 @@ void setup()
     client.connect("sparkclient_" + String(Time.now()));
     if (client.isConnected()) {
         client.publish("my-event", "MQTT connected");
+        client.subscribe("updateStats");
     }
 
     batteryTimer.start();
@@ -89,34 +91,9 @@ void loop()
  ******************************************************************************/
 
  {
-     
     if (client.isConnected()) {
         client.loop();
     }
-
-#if 0
-    Serial1.print("t0.txt=\"25.4°C\"");
-    Serial1.write(0xff);
-    Serial1.write(0xff);
-    Serial1.write(0xff);
-    
-  delay(1000);
-#endif 
-
-    Serial1.print("t0.txt=");
-    Serial1.write(0x22); 
-    // Visar batterispänning med en deciamal ex 13,9
-    Serial1.print(batteryVoltage,1); 
-    Serial1.write(0x22); 
-
-
-
-    Serial1.write(0xff);
-    Serial1.write(0xff);
-    Serial1.write(0xff);
-    
-    
-  delay(1000);
 
    int takeReading = forceReading || batteryTimer.interval();
    
@@ -125,9 +102,31 @@ void loop()
    }
 
   // clear flag
-  if (forceReading) {
+  if (forceReading > 0) {
     forceReading--;
   }
+
+  measureVA();
+  
+  Serial1.print("t0.txt=\"25.4°C\"");
+  Serial1.write(0xff);
+  Serial1.write(0xff);
+  Serial1.write(0xff);
+    
+  delay(1000);
+
+  Serial1.print("t0.txt=");
+  Serial1.write(0x22); 
+    // Visar batterispänning med en deciamal ex 13,9
+  Serial1.print(batteryVoltage,1); 
+  Serial1.write(0x22); 
+
+  Serial1.write(0xff);
+  Serial1.write(0xff);
+  Serial1.write(0xff);
+  //delay(1000);
+
+
   
   // Publicera till particle cloud
   String temp2 = String(batteryVoltage,1); // store voltage in "batteryVoltage" string
@@ -177,7 +176,11 @@ void loop()
     cykelId = cykelId + 1;
 //delay (3600);
 //delay (360000); // 5 minute delay
+ 
+ 
+}
 
+void measureVA() {
 //version 1 ChargeAmp
 //float average = 0;
   //for(int i = 0; i < 1000; i++) {
@@ -197,12 +200,12 @@ void loop()
     //sensorValue = analogRead(A1);
     //temp5 = 514 - sensorValue;
     //chargeAmp = 75.76 * temp5 / 1023;
-    
+
   // check to see what the value of the A0 input is and store it in the int(heltal) variable analogvalue
   // batteryVoltage är ett flyttal som visar decimaler. Formel : batteryVoltage = A0 * 2 / 112
     analogvalue = analogRead(A0);
     temp = analogvalue*2;
-    batteryVoltage = temp / 112;
+    batteryVoltage = temp/112;
 // 3035=54,2v  3012=53,8V : 3007= 53,7V : 3001 = 53,6V :2996= 53,5 :  2938 = 52V : 2800 = 50v : 2700 = 48,21
 
    if (analogvalue<2700) {
@@ -226,8 +229,9 @@ void loop()
 
    }
 
-}
 
+
+}
 
 
 
