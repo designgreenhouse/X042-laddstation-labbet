@@ -30,6 +30,15 @@ MQTT client("skinny.skycharts.net", 1883, callback);
 PollingTimer batteryTimer(360000);
 volatile int forceReading = 1;
 
+void mqttPublish(char *event, String msg) {
+    if (!client.isConnected()) {
+         client.connect("x042_" + String(Time.now()));
+    }
+    if (client.isConnected()) {
+        client.publish(event, msg);
+    }
+}
+
 // MQTT recieve message (not used right now but include if needed)
 void callback(char *topic, byte *payload, unsigned int length)
 {
@@ -66,11 +75,11 @@ void setup()
     pinMode(A0, INPUT);
     
     // connect to the server(unique id by Time.now())
-    client.connect("sparkclient_" + String(Time.now()));
+    client.connect("x042_" + String(Time.now()));
     if (client.isConnected()) {
-        client.publish("my-event", "MQTT connected");
         client.subscribe("updateStats");
     }
+    mqttPublish("my-event", "MQTT connected");
 
     batteryTimer.start();
 }
@@ -134,10 +143,8 @@ void loop()
   String temp4 = String(chargeAmp,1); // store ampere in "chargeAmp" string
   Particle.publish("chargeAmp", temp4, PRIVATE); // publish to cloud
   
-  if (client.isConnected()) {
-      client.publish("batteryVoltage", temp2);
-      client.publish("chargeAmp" , temp4);
-  }
+  mqttPublish("batteryVoltage", temp2);
+  mqttPublish("chargeAmp" , temp4);
  // Particle.publish("batteryVoltage", "13,9", PRIVATE); // publish to cloud
 
     String temp3 = String(cykelId); // store "CykelId" in string
@@ -148,29 +155,19 @@ void loop()
     }
     else {
        Particle.publish( "laddare1/cykelId", temp3, PRIVATE);
-      if (client.isConnected()) {
-          client.publish("laddare1/cykelId", temp3);
-      }
-        
+       mqttPublish("laddare1/cykelId", temp3);
     }
    if (laddare2) {
     }
     else {
        Particle.publish( "laddare2/cykelId", temp3, PRIVATE);
-      if (client.isConnected()) {
-          client.publish("laddare2/cykelId", temp3);
-      }
-       
-        
+       mqttPublish("laddare2/cykelId", temp3);
     }
    if (laddare3) {
     }
     else {
        Particle.publish( "laddare3/cykelId", temp3, PRIVATE);
-      if (client.isConnected()) {
-          client.publish("laddare3/cykelId", temp3);
-      }
-        
+       mqttPublish("laddare3/cykelId", temp3);
     }
     
     cykelId = cykelId + 1;
@@ -212,18 +209,14 @@ void measureVA() {
    // if (batteryVoltage>53) {2968
         digitalWrite(D3,HIGH);
         Particle.publish("my-event","High");
-        if (client.isConnected()) {
-          client.publish("my-event", "High");
-        }
+        mqttPublish("my-event", "High");
 
     }
  else if (analogvalue>2938) {
 //    else if (batteryVoltage<53.8) {3012
         digitalWrite(D3,LOW);
         Particle.publish("my-event","Low");
-        if (client.isConnected()) {
-          client.publish("my-event", "Low");
-        }
+        mqttPublish("my-event", "Low");
    }
    else {
 
@@ -354,3 +347,4 @@ int tinkerAnalogWrite(String command)
 	}
 	else return -2;
 }
+
