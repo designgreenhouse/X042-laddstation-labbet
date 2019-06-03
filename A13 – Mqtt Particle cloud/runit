@@ -1,0 +1,6 @@
+particle -vv compile photon . --saveTo led.bin && particle flash dainty led.bin && \
+sleep 5 && screen /dev/tty.usbmodem11 115200
+
+#to monitor:
+#screen /dev/tty.usbmodem11 115200
+#use Ctrl+A and Ctrl+D to exit
